@@ -210,9 +210,10 @@ class SOSNodeProcess(CustomAction):
             if self.exec_action(context.clone(), action):
                 return True
 
+            # 尝试所有 interrupts
             for interrupt in interrupts:
-                context.tasker.controller.post_screencap().wait().get()
-                if self.exec_action(context.clone(), interrupt):
+                img = context.tasker.controller.post_screencap().wait().get()
+                if self.exec_action(context.clone(), interrupt, img):
                     retry_times = 0
                     break
 
@@ -220,10 +221,12 @@ class SOSNodeProcess(CustomAction):
             retry_times += 1
         return False
 
-    def exec_action(self, context: Context, action: dict | list | str) -> bool:
+    def exec_action(self, context: Context, action: dict | list | str, img=None) -> bool:
         # 如果是字符串,说明是 interrupt 节点，识别后执行
         if isinstance(action, str):
-            if context.run_recognition(action, context.tasker.controller.cached_image):
+            # 如果没有传入 img，使用 cached_image
+            check_img = img if img is not None else context.tasker.controller.cached_image
+            if context.run_recognition(action, check_img):
                 logger.debug(f"执行中断节点: {action}")
                 context.run_task(action)
                 return True
@@ -751,9 +754,24 @@ class SOSBuyItems(CustomAction):
         purchased_items = []
         remaining_money = current_money
         purchased_set = set()  # 已购买的物品名集合
-        last_screen_texts = set()  # 上一屏的物品文本集合，用于判断是否到顶部
+        last_screen_texts = set()  # 上一屏的物品文本集合，用于判断是否到底部
 
-        # 从底部开始向上滑动购买
+        # 先滑动到顶部
+        for _ in range(5):
+            context.run_task(
+                "Swipe",
+                {
+                    "Swipe": {
+                        "action": "Swipe",
+                        "begin": [368, 120, 30, 27],
+                        "end": [380, 459, 24, 21],
+                        "duration": 500,
+                        "post_delay": 500,
+                    }
+                },
+            )
+
+        # 从顶部开始向下滑动购买
         max_scroll_times = 10
         scroll_times = 0
 
@@ -789,7 +807,7 @@ class SOSBuyItems(CustomAction):
                 if not item.get("text", "").isdigit()
             }
 
-            # 判断是否到达顶部（与上一屏内容80%相同）
+            # 判断是否到达底部（与上一屏内容80%相同）
             if last_screen_texts:
                 intersection = current_screen_texts & last_screen_texts
                 if (
@@ -858,14 +876,14 @@ class SOSBuyItems(CustomAction):
             # 如果当前屏幕没有可购买的物品，滑动到下一页
             if not items_on_screen:
                 scroll_times += 1
-                # 向上滑动
+                # 向下滑动
                 context.run_task(
                     "Swipe",
                     {
                         "Swipe": {
                             "action": "Swipe",
-                            "begin": [368, 120, 30, 27],
-                            "end": [380, 459, 24, 21],
+                            "begin": [380, 459, 24, 21],
+                            "end": [368, 120, 30, 27],
                             "duration": 500,
                             "post_delay": 500,
                         }
@@ -904,14 +922,14 @@ class SOSBuyItems(CustomAction):
             # 如果当前屏幕购买了物品，重新检查当前屏幕，否则滑动
             if not purchased_current_screen:
                 scroll_times += 1
-                # 向上滑动
+                # 向下滑动
                 context.run_task(
                     "Swipe",
                     {
                         "Swipe": {
                             "action": "Swipe",
-                            "begin": [368, 120, 30, 27],
-                            "end": [380, 459, 24, 21],
+                            "begin": [380, 459, 24, 21],
+                            "end": [368, 120, 30, 27],
                             "duration": 500,
                             "post_delay": 500,
                         }

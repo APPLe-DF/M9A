@@ -1484,7 +1484,8 @@
                     342
                 ],
                 "template": [
-                    "SyndromeOfSilence/NextMessage.png"
+                    "SyndromeOfSilence/NextMessage.png",
+                    "SyndromeOfSilence/NextMessage1.png"
                 ]
             }
         },
@@ -1503,7 +1504,8 @@
                     26
                 ],
                 "template": [
-                    "SyndromeOfSilence/NextMessage.png"
+                    "SyndromeOfSilence/NextMessage.png",
+                    "SyndromeOfSilence/NextMessage1.png"
                 ]
             }
         },
