@@ -335,6 +335,7 @@ class SOSNodeProcess(CustomAction):
                     order_by: str = action.get("order_by", "Vertical")
 
                     # 先识别一下是否有途中偶遇选项界面
+                    time.sleep(3)
                     img = context.tasker.controller.post_screencap().wait().get()
                     check_reco = context.run_recognition(
                         "SOSSelectEncounterOptionRec_Template", img
@@ -359,6 +360,7 @@ class SOSNodeProcess(CustomAction):
                     index: int = action.get("index", 0)
 
                     # 先识别一下是否有途中偶遇选项界面
+                    time.sleep(3)
                     img = context.tasker.controller.post_screencap().wait().get()
                     check_reco = context.run_recognition(
                         "SOSSelectEncounterOptionRec_Template", img

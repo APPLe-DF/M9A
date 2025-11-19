@@ -1,4 +1,5 @@
 import json
+import time
 from typing import Union, Optional, cast, Any
 
 from maa.agent.agent_server import AgentServer
@@ -21,6 +22,7 @@ class SOSSelectEncounterOptionFindSelected(CustomRecognition):
         argv: CustomRecognition.AnalyzeArg,
     ) -> Union[CustomRecognition.AnalyzeResult, Optional[RectType]]:
 
+        time.sleep(3)
         reco_detail = context.run_recognition(
             "SOSSelectEncounterOptionRec_Template", argv.image
         )
