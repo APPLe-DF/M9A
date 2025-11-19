@@ -1304,8 +1304,10 @@ class SOSSwitchStat(CustomAction):
         context.run_action(
             "Click",
             pipeline_override={
-                "action": "Click",
-                "target": stat_icon_rois[results.index(min(results))],
+                "Click": {
+                    "action": "Click",
+                    "target": stat_icon_rois[results.index(min(results))],
+                }
             },
         )
 
