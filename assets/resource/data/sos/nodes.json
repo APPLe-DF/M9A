@@ -1106,6 +1106,15 @@
                     }
                 ],
                 "interrupts": "@TheOnlyWay"
+            },
+            "既视感": {
+                "actions": [
+                    {
+                        "type": "SelectOption",
+                        "method": "HSV"
+                    }
+                ],
+                "interrupts": "@TheOnlyWay"
             }
         }
     },
