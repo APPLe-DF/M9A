@@ -1070,6 +1070,16 @@
                     }
                 ],
                 "interrupts": "@TheOnlyWay"
+            },
+            "黑袍访客": {
+                "actions": [
+                    {
+                        "type": "SelectOption",
+                        "method": "HSV",
+                        "index": 1
+                    }
+                ],
+                "interrupts": "@TheOnlyWay"
             }
         }
     },
