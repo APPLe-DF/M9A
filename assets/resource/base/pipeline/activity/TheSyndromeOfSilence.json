@@ -1239,7 +1239,9 @@
                 ]
             }
         },
-        "inverse": true
+        "inverse": true,
+        "post_delay": 1500,
+        "post_wait_freezes": 300
     },
     "SOSFailed": {
         "recognition": {
