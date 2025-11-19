@@ -340,11 +340,17 @@
                         "order_by": "Horizontal",
                         "index": 1
                     },
-                    {
-                        "type": "SelectEncounterOption",
-                        "method": "OCR",
-                        "expected": "模仿他的手势"
-                    }
+                    [
+                        {
+                            "type": "SelectEncounterOption",
+                            "method": "OCR",
+                            "expected": "模仿他的手势"
+                        },
+                        {
+                            "type": "RunNode",
+                            "name": "FlagInSOSMain"
+                        }
+                    ]
                 ],
                 "interrupts": "@EncounterAlongTheWay"
             },
@@ -605,6 +611,16 @@
                             "type": "RunNode",
                             "name": "FlagInSOSMain"
                         }
+                    ],
+                    [
+                        {
+                            "type": "SelectEncounterOption",
+                            "method": "HSV"
+                        },
+                        {
+                            "type": "RunNode",
+                            "name": "FlagInSOSMain"
+                        }
                     ]
                 ],
                 "interrupts": "@EncounterAlongTheWay"
@@ -777,44 +793,37 @@
                 "actions": [
                     {
                         "type": "SelectOption",
-                        "method": "OCR",
-                        "expected": [
-                            "奥秘",
-                            "力量",
-                            "激情",
-                            "反应",
-                            "感知"
-                        ]
+                        "method": "HSV"
+                    },
+                    {
+                        "type": "SelectOption",
+                        "method": "HSV"
+                    },
+                    {
+                        "type": "SelectOption",
+                        "method": "HSV"
                     },
                     {
                         "type": "SelectOption",
                         "method": "OCR",
                         "expected": [
-                            "奥秘",
-                            "力量",
-                            "激情",
-                            "反应",
-                            "感知"
+                            "进入休整地域",
+                            "结束事件"
                         ]
                     },
-                    {
-                        "type": "SelectOption",
-                        "method": "OCR",
-                        "expected": [
-                            "奥秘",
-                            "力量",
-                            "激情",
-                            "反应",
-                            "感知"
-                        ]
-                    },
-                    {
-                        "type": "SelectOption",
-                        "method": "OCR",
-                        "expected": [
-                            "进入休整地域"
-                        ]
-                    }
+                    [
+                        {
+                            "type": "RunNode",
+                            "name": "FlagInSOSMain"
+                        },
+                        {
+                            "type": "SelectOption",
+                            "method": "OCR",
+                            "expected": [
+                                "进入休整地域"
+                            ]
+                        }
+                    ]
                 ],
                 "interrupts": "@TheOnlyWay"
             },
@@ -1100,6 +1109,25 @@
                     }
                 ],
                 "interrupts": "@TheOnlyWay"
+            },
+            "既视感": {
+                "actions": [
+                    {
+                        "type": "SelectOption",
+                        "method": "HSV"
+                    }
+                ],
+                "interrupts": "@TheOnlyWay"
+            },
+            "顺风车": {
+                "actions": [
+                    {
+                        "type": "SelectOption",
+                        "method": "HSV",
+                        "index": -1
+                    }
+                ],
+                "interrupts": "@TheOnlyWay"
             }
         }
     },
@@ -1115,14 +1143,8 @@
                 "actions": [
                     {
                         "type": "SelectOption",
-                        "method": "OCR",
-                        "expected": [
-                            "奥秘",
-                            "力量",
-                            "激情",
-                            "反应",
-                            "感知"
-                        ]
+                        "method": "HSV",
+                        "index": -1
                     }
                 ],
                 "interrupts": "@message+@stats+@artefact+@harmonic+@resonator+@others"

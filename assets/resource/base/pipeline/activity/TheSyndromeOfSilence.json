@@ -750,8 +750,7 @@
                     11,
                     12
                 ],
-                "order_by": "Horizontal",
-                "index": -1
+                "order_by": "Score"
             }
         },
         "action": {
@@ -1239,7 +1238,9 @@
                 ]
             }
         },
-        "inverse": true
+        "inverse": true,
+        "post_delay": 1500,
+        "post_wait_freezes": 300
     },
     "SOSFailed": {
         "recognition": {
@@ -1447,7 +1448,15 @@
             }
         },
         "action": {
-            "type": "Click"
+            "type": "Click",
+            "param": {
+                "target_offset": [
+                    64,
+                    9,
+                    0,
+                    -17
+                ]
+            }
         },
         "pre_delay": 700,
         "next": [
@@ -1520,7 +1529,8 @@
                 "roi": "SOSEventRec",
                 "expected": [
                     "[\\u4e00-\\u9fa5]"
-                ]
+                ],
+                "threshold": 0.6
             }
         },
         "action": {
@@ -1781,6 +1791,7 @@
                 "expected": [
                     "[\\u4e00-\\u9fa5]+"
                 ],
+                "threshold": 0.6,
                 "replace": [
                     [
                         "到子手",
@@ -1795,7 +1806,7 @@
                         "鬃毛"
                     ],
                     [
-                        "[\"“]毛",
+                        "[\"”]毛",
                         "“毛"
                     ],
                     [
@@ -1803,19 +1814,23 @@
                         "鬃毛的回报"
                     ],
                     [
-                        "[\"“]最",
+                        "[\"”]最",
                         "“最"
                     ],
                     [
-                        "报[！!1]",
+                        "报[！!1I][！!1I]",
+                        "报Ⅱ"
+                    ],
+                    [
+                        "报[！!1I]",
                         "报Ⅰ"
                     ],
                     [
-                        "[\"“]迪",
+                        "[\"”]迪",
                         "“迪"
                     ],
                     [
-                        "[\"“]社",
+                        "[\"”]社",
                         "“社"
                     ],
                     [
@@ -1827,7 +1842,7 @@
                         "急需工人"
                     ],
                     [
-                        "[\"“]滂",
+                        "[\"”]滂",
                         "“滂"
                     ]
                 ]
@@ -1925,9 +1940,6 @@
             "param": {
                 "custom_recognition": "SOSSelectEncounterOptionFindSelected"
             }
-        },
-        "action": {
-            "type": "Click"
         },
         "inverse": true
     },
