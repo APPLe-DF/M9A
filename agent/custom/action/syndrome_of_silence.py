@@ -780,15 +780,7 @@ class SOSBuyItems(CustomAction):
         except:
             pass
 
-        # 贪心算法：按价格从低到高排序，尽可能购买更多数量
-        sorted_items = sorted(
-            shopping_items.items(), key=lambda x: x[1], reverse=False  # 价格从低到高
-        )
-
-        purchased_items = []
-        remaining_money = current_money
-        purchased_set = set()  # 已购买的物品名集合
-        last_screen_texts = set()  # 上一屏的物品文本集合，用于判断是否到底部
+        # 第一阶段：遍历所有页面，收集所有可购买物品及其位置信息
 
         # 先滑动到顶部
         for _ in range(5):
@@ -805,25 +797,27 @@ class SOSBuyItems(CustomAction):
                 },
             )
 
-        # 从顶部开始向下滑动购买
+        all_buyable_items = (
+            []
+        )  # 存储所有可购买的物品: [(item_name, item_price, page_index, result), ...]
+        last_screen_texts = set()
+        page_index = 0
         max_scroll_times = 10
-        scroll_times = 0
 
-        while scroll_times < max_scroll_times:
+        while page_index < max_scroll_times:
             # 截图并识别当前屏幕的物品
             img = context.tasker.controller.post_screencap().wait().get()
             reco_detail = context.run_recognition("SOSShoppingListOCR", img)
 
             if not reco_detail:
-                scroll_times += 1
-                # 向上滑动
+                page_index += 1
                 context.run_task(
                     "Swipe",
                     {
                         "Swipe": {
                             "action": "Swipe",
-                            "begin": [368, 120, 30, 27],
-                            "end": [380, 459, 24, 21],
+                            "begin": [380, 459, 24, 21],
+                            "end": [368, 120, 30, 27],
                             "duration": 500,
                             "post_delay": 500,
                         }
@@ -873,44 +867,98 @@ class SOSBuyItems(CustomAction):
                     current = price_results[i]
                     current_text = current.get("text", "")
 
-                    # 跳过纯数字
                     if current_text.isdigit():
                         i += 1
                         continue
 
-                    # 检查下一个是否为价格
                     if i + 1 < len(price_results):
                         next_item = price_results[i + 1]
                         next_text = next_item.get("text", "")
 
                         if next_text.isdigit():
-                            # 这个物品有价格，说明买得起
                             affordable_items.add(current_text)
 
                     i += 1
 
-            # 在当前屏幕找到所有待购买的物品（必须在affordable_items中）
-            items_on_screen = []
+            # 收集当前屏幕的可购买物品
             for result in current_results:
                 text = result.get("text", "")
-                # 检查是否是待购买列表中的物品，且价格可见（买得起）
-                for item_name, item_price in sorted_items:
+                # 检查是否是购物清单中的物品，且价格可见（买得起）
+                for item_name, item_price in shopping_items.items():
                     if (
                         (item_name in text or text in item_name)
-                        and item_name not in purchased_set
-                        and item_price <= remaining_money
-                        and text in affordable_items  # 必须价格可见
+                        and item_price <= current_money
+                        and text in affordable_items
                     ):
-                        items_on_screen.append((item_name, item_price, result))
+                        all_buyable_items.append(
+                            (item_name, item_price, page_index, result)
+                        )
                         break
 
-            # 按价格排序当前屏幕的物品（价格从低到高，确保买数量最多）
-            items_on_screen.sort(key=lambda x: x[1])
+            # 向下滑动到下一页
+            page_index += 1
+            context.run_task(
+                "Swipe",
+                {
+                    "Swipe": {
+                        "action": "Swipe",
+                        "begin": [380, 459, 24, 21],
+                        "end": [368, 120, 30, 27],
+                        "duration": 500,
+                        "post_delay": 500,
+                    }
+                },
+            )
 
-            # 如果当前屏幕没有可购买的物品，滑动到下一页
-            if not items_on_screen:
-                scroll_times += 1
-                # 向下滑动
+        # 第二阶段：按价格排序，使用贪心算法决定购买哪些物品
+
+        # 去重：同一物品可能在多个页面出现，只保留第一次出现的
+        seen_items = {}
+        for item_name, item_price, page_idx, result in all_buyable_items:
+            if item_name not in seen_items:
+                seen_items[item_name] = (item_price, page_idx, result)
+
+        # 按价格从低到高排序（贪心策略：买便宜的，数量更多）
+        sorted_buyable = sorted(seen_items.items(), key=lambda x: x[1][0])
+
+        # 计算购买方案
+        purchase_plan = []
+        remaining_money = current_money
+        for item_name, (item_price, page_idx, result) in sorted_buyable:
+            if item_price <= remaining_money:
+                purchase_plan.append((item_name, item_price, page_idx, result))
+                remaining_money -= item_price
+
+        # 第三阶段：按页面顺序执行购买
+
+        # 先回到顶部
+        for _ in range(5):
+            context.run_task(
+                "Swipe",
+                {
+                    "Swipe": {
+                        "action": "Swipe",
+                        "begin": [368, 120, 30, 27],
+                        "end": [380, 459, 24, 21],
+                        "duration": 500,
+                        "post_delay": 500,
+                    }
+                },
+            )
+
+        # 按页面索引分组
+        purchase_by_page = {}
+        for item_name, item_price, page_idx, result in purchase_plan:
+            if page_idx not in purchase_by_page:
+                purchase_by_page[page_idx] = []
+            purchase_by_page[page_idx].append((item_name, item_price, result))
+
+        purchased_items = []
+        current_page = 0
+
+        for page_idx in sorted(purchase_by_page.keys()):
+            # 滑动到目标页面
+            while current_page < page_idx:
                 context.run_task(
                     "Swipe",
                     {
@@ -923,55 +971,19 @@ class SOSBuyItems(CustomAction):
                         }
                     },
                 )
-                continue
+                current_page += 1
 
-            # 购买当前屏幕的物品
-            purchased_current_screen = False
-            for item_name, item_price, result in items_on_screen:
-                # 在购买前再次检查是否还买得起（因为购买其他物品后金钱可能减少）
-                if item_price > remaining_money:
-                    continue
-
+            # 购买该页面的所有物品
+            for item_name, item_price, result in purchase_by_page[page_idx]:
                 if self._buy_item_on_screen(context, item_name, result, interrupts):
                     purchased_items.append((item_name, item_price))
-                    purchased_set.add(item_name)
-                    remaining_money -= item_price
-                    purchased_current_screen = True
-                    logger.info(
-                        f"购买成功: {item_name} ({item_price}), 剩余: {remaining_money}"
-                    )
+                    logger.info(f"购买成功: {item_name} ({item_price})")
                 else:
                     logger.warning(f"购买失败: {item_name}")
 
-            # 检查是否还有未购买的物品
-            remaining_items = [
-                (name, price)
-                for name, price in sorted_items
-                if name not in purchased_set and price <= remaining_money
-            ]
-
-            if not remaining_items:
-                break
-
-            # 如果当前屏幕购买了物品，重新检查当前屏幕，否则滑动
-            if not purchased_current_screen:
-                scroll_times += 1
-                # 向下滑动
-                context.run_task(
-                    "Swipe",
-                    {
-                        "Swipe": {
-                            "action": "Swipe",
-                            "begin": [380, 459, 24, 21],
-                            "end": [368, 120, 30, 27],
-                            "duration": 500,
-                            "post_delay": 500,
-                        }
-                    },
-                )
-
+        total_spent = sum(price for _, price in purchased_items)
         logger.info(f"购买完成，共购买 {len(purchased_items)} 件物品")
-        logger.info(f"花费: {current_money - remaining_money}, 剩余: {remaining_money}")
+        logger.info(f"花费: {total_spent}, 剩余: {current_money - total_spent}")
 
         return CustomAction.RunResult(success=True)
 
