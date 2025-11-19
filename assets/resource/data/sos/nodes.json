@@ -824,22 +824,14 @@
                             "感知"
                         ]
                     },
-                    [
-                        {
-                            "type": "SelectOption",
-                            "method": "OCR",
-                            "expected": [
-                                "进入休整地域"
-                            ]
-                        },
-                        {
-                            "type": "SelectOption",
-                            "method": "OCR",
-                            "expected": [
-                                "结束事件"
-                            ]
-                        }
-                    ],
+                    {
+                        "type": "SelectOption",
+                        "method": "OCR",
+                        "expected": [
+                            "进入休整地域",
+                            "结束事件"
+                        ]
+                    },
                     [
                         {
                             "type": "RunNode",
