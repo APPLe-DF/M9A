@@ -802,7 +802,7 @@ class SOSBuyItems(CustomAction):
         )  # 存储所有可购买的物品: [(item_name, item_price, page_index, result), ...]
         last_screen_texts = set()
         page_index = 0
-        max_scroll_times = 10
+        max_scroll_times = 5
 
         while page_index < max_scroll_times:
             # 截图并识别当前屏幕的物品
@@ -932,7 +932,7 @@ class SOSBuyItems(CustomAction):
         # 第三阶段：按页面顺序执行购买
 
         # 先回到顶部
-        for _ in range(5):
+        for _ in range(3):
             context.run_task(
                 "Swipe",
                 {
