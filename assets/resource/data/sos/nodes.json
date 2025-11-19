@@ -793,36 +793,15 @@
                 "actions": [
                     {
                         "type": "SelectOption",
-                        "method": "OCR",
-                        "expected": [
-                            "奥秘",
-                            "力量",
-                            "激情",
-                            "反应",
-                            "感知"
-                        ]
+                        "method": "HSV"
                     },
                     {
                         "type": "SelectOption",
-                        "method": "OCR",
-                        "expected": [
-                            "奥秘",
-                            "力量",
-                            "激情",
-                            "反应",
-                            "感知"
-                        ]
+                        "method": "HSV"
                     },
                     {
                         "type": "SelectOption",
-                        "method": "OCR",
-                        "expected": [
-                            "奥秘",
-                            "力量",
-                            "激情",
-                            "反应",
-                            "感知"
-                        ]
+                        "method": "HSV"
                     },
                     {
                         "type": "SelectOption",
