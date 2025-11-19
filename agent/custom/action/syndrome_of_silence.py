@@ -2,7 +2,9 @@ import re
 import time
 import json
 import copy
+import os
 from typing import cast
+from PIL import Image
 import numpy as np
 
 from maa.agent.agent_server import AgentServer
@@ -42,6 +44,30 @@ class SOSSelectNode(CustomAction):
 
         with open("resource/data/sos/nodes.json", encoding="utf-8") as f:
             nodes = json.load(f)
+
+        # 检查识别结果中在期望列表中的结果，保存截图用于调试
+        expected_indices = [1, 2, 3, 4, 5, 6, 8, 9, 10, 11, 12]
+        score_threshold = 0.6
+        if argv.reco_detail.filterd_results:
+            expected_results = [
+                r
+                for r in argv.reco_detail.filterd_results
+                if isinstance(r, NeuralNetworkDetectResult)
+                and r.cls_index in expected_indices
+                and r.score < score_threshold
+            ]
+            if expected_results:
+                img = context.tasker.controller.cached_image
+                timestamp = time.strftime("%Y%m%d_%H%M%S")
+                save_dir = "debug/custom/SOSSelectNode"
+                os.makedirs(save_dir, exist_ok=True)
+                save_path = f"{save_dir}/{timestamp}.png"
+                Image.fromarray(img).save(save_path)
+                logger.debug(f"检测到低分数节点，截图已保存: {save_path}")
+                for i, r in enumerate(expected_results):
+                    logger.debug(
+                        f"  结果{i}: 类型={nodes['types'][r.cls_index]} (cls_index={r.cls_index}), 分数={r.score:.3f}"
+                    )
 
         type = nodes["types"][reco_detail.cls_index]
         SOSSelectNode.type = type
@@ -335,7 +361,7 @@ class SOSNodeProcess(CustomAction):
                     order_by: str = action.get("order_by", "Vertical")
 
                     # 先识别一下是否有途中偶遇选项界面
-                    time.sleep(3)
+                    time.sleep(1)
                     img = context.tasker.controller.post_screencap().wait().get()
                     check_reco = context.run_recognition(
                         "SOSSelectEncounterOptionRec_Template", img
@@ -360,7 +386,7 @@ class SOSNodeProcess(CustomAction):
                     index: int = action.get("index", 0)
 
                     # 先识别一下是否有途中偶遇选项界面
-                    time.sleep(3)
+                    time.sleep(1)
                     img = context.tasker.controller.post_screencap().wait().get()
                     check_reco = context.run_recognition(
                         "SOSSelectEncounterOptionRec_Template", img

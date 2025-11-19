@@ -22,7 +22,6 @@ class SOSSelectEncounterOptionFindSelected(CustomRecognition):
         argv: CustomRecognition.AnalyzeArg,
     ) -> Union[CustomRecognition.AnalyzeResult, Optional[RectType]]:
 
-        time.sleep(3)
         reco_detail = context.run_recognition(
             "SOSSelectEncounterOptionRec_Template", argv.image
         )
