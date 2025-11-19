@@ -398,7 +398,7 @@
                     {
                         "type": "SelectEncounterOption",
                         "method": "OCR",
-                        "expected": "接取一个简单的委托"
+                        "expected": "简单"
                     },
                     {
                         "type": "SelectEncounterOption",
@@ -408,7 +408,7 @@
                     {
                         "type": "SelectEncounterOption",
                         "method": "OCR",
-                        "expected": "接取一个简单的委托"
+                        "expected": "简单"
                     },
                     {
                         "type": "SelectEncounterOption",
@@ -418,7 +418,7 @@
                     {
                         "type": "SelectEncounterOption",
                         "method": "OCR",
-                        "expected": "接取一个简单的委托"
+                        "expected": "简单"
                     }
                 ],
                 "interrupts": "@EncounterAlongTheWay"
