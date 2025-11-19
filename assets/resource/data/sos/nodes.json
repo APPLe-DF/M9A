@@ -340,11 +340,17 @@
                         "order_by": "Horizontal",
                         "index": 1
                     },
-                    {
-                        "type": "SelectEncounterOption",
-                        "method": "OCR",
-                        "expected": "模仿他的手势"
-                    }
+                    [
+                        {
+                            "type": "SelectEncounterOption",
+                            "method": "OCR",
+                            "expected": "模仿他的手势"
+                        },
+                        {
+                            "type": "RunNode",
+                            "name": "FlagInSOSMain"
+                        }
+                    ]
                 ],
                 "interrupts": "@EncounterAlongTheWay"
             },
