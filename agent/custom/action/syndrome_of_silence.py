@@ -435,13 +435,12 @@ class SOSSelectEncounterOption_OCR(CustomAction):
 
         for option in options:
             if expected in option["content"]:
-                x, y, w, h = option["roi"]
                 context.run_task(
                     "Click",
                     {
                         "Click": {
                             "action": "Click",
-                            "target": [x + 30, y, w, h],
+                            "target": option["roi"],
                             "pre_delay": 0,
                             "post_delay": 1500,
                         }
@@ -466,13 +465,12 @@ class SOSSelectEncounterOption_HSV(CustomAction):
         index: int = json.loads(argv.custom_action_param).get("index", 0)
         options: list[dict] = argv.reco_detail.raw_detail["best"]["detail"]["options"]
 
-        x, y, w, h = options[index]["roi"]
         context.run_task(
             "Click",
             {
                 "Click": {
                     "action": "Click",
-                    "target": [x + 30, y, w, h],
+                    "target": options[index]["roi"],
                     "pre_delay": 0,
                     "post_delay": 1500,
                 }

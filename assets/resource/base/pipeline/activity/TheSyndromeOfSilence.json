@@ -1448,7 +1448,15 @@
             }
         },
         "action": {
-            "type": "Click"
+            "type": "Click",
+            "param": {
+                "target_offset": [
+                    64,
+                    9,
+                    0,
+                    -17
+                ]
+            }
         },
         "pre_delay": 700,
         "next": [
@@ -1932,9 +1940,6 @@
             "param": {
                 "custom_recognition": "SOSSelectEncounterOptionFindSelected"
             }
-        },
-        "action": {
-            "type": "Click"
         },
         "inverse": true
     },
