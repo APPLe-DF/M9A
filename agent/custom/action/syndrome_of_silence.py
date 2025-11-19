@@ -210,9 +210,10 @@ class SOSNodeProcess(CustomAction):
             if self.exec_action(context.clone(), action):
                 return True
 
+            # 尝试所有 interrupts
             for interrupt in interrupts:
-                context.tasker.controller.post_screencap().wait().get()
-                if self.exec_action(context.clone(), interrupt):
+                img = context.tasker.controller.post_screencap().wait().get()
+                if self.exec_action(context.clone(), interrupt, img):
                     retry_times = 0
                     break
 
@@ -220,10 +221,12 @@ class SOSNodeProcess(CustomAction):
             retry_times += 1
         return False
 
-    def exec_action(self, context: Context, action: dict | list | str) -> bool:
+    def exec_action(self, context: Context, action: dict | list | str, img=None) -> bool:
         # 如果是字符串,说明是 interrupt 节点，识别后执行
         if isinstance(action, str):
-            if context.run_recognition(action, context.tasker.controller.cached_image):
+            # 如果没有传入 img，使用 cached_image
+            check_img = img if img is not None else context.tasker.controller.cached_image
+            if context.run_recognition(action, check_img):
                 logger.debug(f"执行中断节点: {action}")
                 context.run_task(action)
                 return True
