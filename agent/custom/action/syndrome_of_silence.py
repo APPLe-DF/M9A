@@ -221,11 +221,15 @@ class SOSNodeProcess(CustomAction):
             retry_times += 1
         return False
 
-    def exec_action(self, context: Context, action: dict | list | str, img=None) -> bool:
+    def exec_action(
+        self, context: Context, action: dict | list | str, img=None
+    ) -> bool:
         # 如果是字符串,说明是 interrupt 节点，识别后执行
         if isinstance(action, str):
             # 如果没有传入 img，使用 cached_image
-            check_img = img if img is not None else context.tasker.controller.cached_image
+            check_img = (
+                img if img is not None else context.tasker.controller.cached_image
+            )
             if context.run_recognition(action, check_img):
                 logger.debug(f"执行中断节点: {action}")
                 context.run_task(action)
@@ -410,6 +414,7 @@ class SOSSelectEncounterOption_OCR(CustomAction):
                         "Click": {
                             "action": "Click",
                             "target": [x + 30, y, w, h],
+                            "pre_delay": 0,
                             "post_delay": 1500,
                         }
                     },
@@ -440,6 +445,7 @@ class SOSSelectEncounterOption_HSV(CustomAction):
                 "Click": {
                     "action": "Click",
                     "target": [x + 30, y, w, h],
+                    "pre_delay": 0,
                     "post_delay": 1500,
                 }
             },
