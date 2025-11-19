@@ -588,6 +588,26 @@
                     }
                 ],
                 "interrupts": "@EncounterAlongTheWay"
+            },
+            "滴答悬想": {
+                "actions": [
+                    {
+                        "type": "SelectEncounterOption",
+                        "method": "OCR",
+                        "expected": "开关表盖"
+                    },
+                    [
+                        {
+                            "type": "SelectEncounterOption",
+                            "method": "HSV"
+                        },
+                        {
+                            "type": "RunNode",
+                            "name": "FlagInSOSMain"
+                        }
+                    ]
+                ],
+                "interrupts": "@EncounterAlongTheWay"
             }
         }
     },
