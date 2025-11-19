@@ -1522,7 +1522,8 @@
                 "roi": "SOSEventRec",
                 "expected": [
                     "[\\u4e00-\\u9fa5]"
-                ]
+                ],
+                "threshold": 0.6
             }
         },
         "action": {
@@ -1783,6 +1784,7 @@
                 "expected": [
                     "[\\u4e00-\\u9fa5]+"
                 ],
+                "threshold": 0.6,
                 "replace": [
                     [
                         "到子手",
