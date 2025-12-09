@@ -562,7 +562,9 @@ At least configure **`Resource Type`** and **`Connection`**. When configured inc
       </ul>
     </blockquote>
   </details>
-  When using the International Server PC client, simply click the PC icon in the connection area to automatically detect and connect to the already opened PC client window.
+
+When using the International Server PC client, simply start M9A in **administrator mode**, then click the PC icon in the connection area to automatically detect and connect to the open PC client window.
+  **IMPORTANT: Do not minimize the game window!**
 
   <details>
     <summary>Illustration</summary>
