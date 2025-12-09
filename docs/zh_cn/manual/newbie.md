@@ -237,10 +237,47 @@ M9A 下载（更新）地址： [GitHub 发布页](https://github.com/MAA1999/M9
 
 ***
 
-### 5 正确设置模拟器分辨率
+### 5 正确设置分辨率
 
-M9A 支持主流模拟器，但您需要设置模拟器分辨率以达到运行要求。  
-模拟器分辨率应为`横屏` `16:9` 比例，推荐（以及最低）分辨率为 `1280x720`，不符合要求造成的运行报错将不会被解决。
+M9A 支持主流模拟器与PC端，但您需要设置模拟器与PC端分辨率以达到运行要求。  
+模拟器与PC端分辨率应为`横屏` `16:9` 比例，推荐（以及最低）分辨率为 `1280x720`，不符合要求造成的运行报错将不会被解决。
+
+#### 国际服PC端
+
+使用国际服PC端时无法改为`16:9`比例？使用PC端初始化脚本。
+
+<details>
+  <summary>详情</summary>
+  <p></p>
+  <blockquote>
+    <ul>
+      <details>
+        <summary>打开脚本</summary>
+          <ol>
+            <li>在M9A根目录找到游戏PC端注册表修改_ModifyPCRegistry.bat</li>
+            <li>双击启动</li>
+          </ol>
+      </details>
+      <details>
+        <summary>步骤1</summary>
+          <ol>
+            <li>打开后在命令行输入1</li>
+            <li>如下图</li>
+          </ol>
+          <ul>
+        <img src="/images/zh-cn/newbie-init-script-step1.png" alt="步骤1">
+      </ul>
+      </details>
+      <details>
+        <summary>步骤2</summary>
+          <ol>
+            <li>根据你要选择的分辨率选择输入a/b/c/d</li>
+            <li>如下图</li>
+          </ol>
+          <ul>
+        <img src="/images/zh-cn/newbie-init-script-step2.png" alt="步骤2">
+      </ul>
+      </details>
 
 >[!WARNING]
 >

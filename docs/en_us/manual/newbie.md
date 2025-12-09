@@ -237,10 +237,46 @@ For emulator support details, please refer to MAA documentation. **For reference
 
 ***
 
-### 5. Set Emulator Resolution Correctly
+### 5 Correctly Set the Resolution
 
-M9A supports mainstream emulators, but you need to set the emulator resolution to meet operational requirements.  
-The emulator resolution should be `landscape` `16:9` ratio, recommended (and minimum) resolution is `1280x720`. Running errors caused by non-compliant requirements will not be resolved.
+M9A supports mainstream emulators and PC clients, but you need to set the resolution of the emulator and PC client to meet the operating requirements. The resolution for the emulator and PC client should be `landscape` `16:9` ratio, with a recommended (and minimum) resolution of `1280x720`. Running errors caused by not meeting this requirement will not be resolved.
+
+#### International Version PC Client
+
+Can't change to `16:9` ratio when using the international version PC client? Use the PC client initialization script.
+
+<details>
+  <summary>Details</summary>
+  <p></p>
+  <blockquote>
+    <ul>
+      <details>
+        <summary>Open the script</summary>
+          <ol>
+            <li>Locate ModifyPCRegistry.bat (Game PC registry modification) in the M9A root directory</li>
+            <li>Double-click to run</li>
+          </ol>
+      </details>
+      <details>
+        <summary>Step 1</summary>
+          <ol>
+            <li>After opening, enter 1 in the command line</li>
+            <li>As shown below</li>
+          </ol>
+          <ul>
+        <img src="/images/zh-cn/newbie-init-script-step1.png" alt="Step 1">
+      </ul>
+      </details>
+      <details>
+        <summary>Step 2</summary>
+          <ol>
+            <li>Enter a/b/c/d according to the resolution you want to select</li>
+            <li>As shown below</li>
+          </ol>
+          <ul>
+        <img src="/images/zh-cn/newbie-init-script-step2.png" alt="Step 2">
+      </ul>
+      </details>
 
 >[!WARNING]
 >
