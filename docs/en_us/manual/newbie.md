@@ -277,6 +277,7 @@ Can't change to `16:9` ratio when using the international version PC client? Use
 >[!WARNING]
 >
 > Note that after changing the resolution, the emulator homepage should be horizontal (tablet version), don't select vertical (mobile version)!
+> When connecting to a PC, run M9A in **administrator mode**, and **do not minimize the game window**!
 
 ***
 
@@ -563,9 +564,12 @@ At least configure **`Resource Type`** and **`Connection`**. When configured inc
     </blockquote>
   </details>
 
-When using the International Server PC client, simply start M9A in **administrator mode**, then click the PC icon in the connection area to automatically detect and connect to the open PC client window.
-  **IMPORTANT: Do not minimize the game window!**
+When using the International Server PC client, simply click the PC icon in the connection area to automatically detect and connect to any open PC client window.  
+> [!WARNING]
+>
+> When connecting to a PC, run M9A in **administrator mode**, and **do not minimize the game window**!
 
+***
   <details>
     <summary>Illustration</summary>
     <p></p>
