@@ -241,9 +241,9 @@ For emulator support details, please refer to MAA documentation. **For reference
 
 M9A supports mainstream emulators and PC clients, but you need to set the resolution of the emulator and PC client to meet the operating requirements. The resolution for the emulator and PC client should be `landscape` `16:9` ratio, with a recommended (and minimum) resolution of `1280x720`. Running errors caused by not meeting this requirement will not be resolved.
 
-#### International Version PC Client
+#### International Server PC client
 
-Can't change to `16:9` ratio when using the international version PC client? Use the PC client initialization script.
+Can't change to `16:9` ratio when using the International Server PC client? Use the PC client initialization script.
 
 <details>
   <summary>Details</summary>
