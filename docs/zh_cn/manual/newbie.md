@@ -251,6 +251,7 @@ M9A 支持主流模拟器与PC端，但您需要设置模拟器与PC端分辨率
   <p></p>
   <blockquote>
     <ul>
+    <li>
       <details>
         <summary>打开脚本</summary>
           <ol>
@@ -258,22 +259,31 @@ M9A 支持主流模拟器与PC端，但您需要设置模拟器与PC端分辨率
             <li>双击启动</li>
           </ol>
       </details>
+    </li>
+    <li>
       <details>
         <summary>步骤1</summary>
           <ol>
             <li>打开后在命令行输入1</li>
             <li>如下图</li>
           </ol>
+          <ul>
           <img src="/images/zh-cn/newbie-init-script-step1.png" alt="步骤1">
+          </ul>
       </details>
+    </li>
+    <li>
       <details>
         <summary>步骤2</summary>
           <ol>
             <li>根据你要选择的分辨率选择输入a/b/c/d</li>
             <li>如下图</li>
           </ol>
+          <ul>
           <img src="/images/zh-cn/newbie-init-script-step2.png" alt="步骤2">
+          </ul>
       </details>
+    </li>
 
 >[!WARNING]
 >

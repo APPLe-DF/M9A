@@ -250,6 +250,7 @@ Can't change to `16:9` ratio when using the international version PC client? Use
   <p></p>
   <blockquote>
     <ul>
+    <li>
       <details>
         <summary>Open the script</summary>
           <ol>
@@ -257,22 +258,31 @@ Can't change to `16:9` ratio when using the international version PC client? Use
             <li>Double-click to run</li>
           </ol>
       </details>
+    </li>
+    <li>
       <details>
         <summary>Step 1</summary>
           <ol>
             <li>After opening, enter 1 in the command line</li>
             <li>As shown below</li>
           </ol>
+          <ul>
           <img src="/images/en-us/newbie-init-script-step1.png" alt="Step 1">
+          </ul>
       </details>
+    </li>
+    <li>
       <details>
         <summary>Step 2</summary>
           <ol>
             <li>Enter a/b/c/d according to the resolution you want to select</li>
             <li>As shown below</li>
           </ol>
+          <ul>
           <img src="/images/en-us/newbie-init-script-step2.png" alt="Step 2">
+          </ul>
       </details>
+    </li>
 
 >[!WARNING]
 >
