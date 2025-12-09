@@ -237,7 +237,7 @@ For emulator support details, please refer to MAA documentation. **For reference
 
 ***
 
-### 5 Correctly Set the Resolution
+### 5. Correctly Set the Resolution
 
 M9A supports mainstream emulators and PC clients, but you need to set the resolution of the emulator and PC client to meet the operating requirements. The resolution for the emulator and PC client should be `landscape` `16:9` ratio, with a recommended (and minimum) resolution of `1280x720`. Running errors caused by not meeting this requirement will not be resolved.
 
@@ -266,9 +266,7 @@ Can't change to `16:9` ratio when using the international version PC client? Use
             <li>After opening, enter 1 in the command line</li>
             <li>As shown below</li>
           </ol>
-          <ul>
           <img src="/images/en-us/newbie-init-script-step1.png" alt="Step 1">
-          </ul>
       </details>
     </li>
     <li>
@@ -278,16 +276,13 @@ Can't change to `16:9` ratio when using the international version PC client? Use
             <li>Enter a/b/c/d according to the resolution you want to select</li>
             <li>As shown below</li>
           </ol>
-          <ul>
           <img src="/images/en-us/newbie-init-script-step2.png" alt="Step 2">
-          </ul>
       </details>
     </li>
 
 >[!WARNING]
 >
 > Note that after changing the resolution, the emulator homepage should be horizontal (tablet version), don't select vertical (mobile version)!
-> When connecting to a PC, run M9A in **administrator mode**, and **do not minimize the game window**!
 
 ***
 
