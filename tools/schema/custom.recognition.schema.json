@@ -562,6 +562,81 @@
                                 "done"
                             ]
                         },
+                        "anchor_mode": {
+                            "type": "string",
+                            "enum": [
+                                "auto",
+                                "name",
+                                "number"
+                            ],
+                            "default": "auto",
+                            "description": "关卡锚点模式：auto 名称优先、无名称回退编号；name 强制名称；number 恢复旧编号路径"
+                        },
+                        "name_score_min": {
+                            "type": "number",
+                            "default": 0.85,
+                            "description": "关卡名 OCR 最低置信度"
+                        },
+                        "name_box_center_x_min": {
+                            "type": "integer",
+                            "default": 120,
+                            "description": "关卡名框中心 x 下限"
+                        },
+                        "name_box_center_x_max": {
+                            "type": "integer",
+                            "default": 1280,
+                            "description": "关卡名框中心 x 上限"
+                        },
+                        "name_box_center_y_min": {
+                            "type": "integer",
+                            "default": 550,
+                            "description": "关卡名框中心 y 下限"
+                        },
+                        "name_box_center_y_max": {
+                            "type": "integer",
+                            "default": 640,
+                            "description": "关卡名框中心 y 上限"
+                        },
+                        "name_box_h_min": {
+                            "type": "integer",
+                            "default": 24,
+                            "description": "关卡名框高度下限"
+                        },
+                        "name_box_h_max": {
+                            "type": "integer",
+                            "default": 90,
+                            "description": "关卡名框高度上限"
+                        },
+                        "name_probe_pad_left": {
+                            "type": "integer",
+                            "default": 5,
+                            "description": "星标探针相对关卡名框的左扩"
+                        },
+                        "name_probe_pad_top": {
+                            "type": "integer",
+                            "default": 70,
+                            "description": "星标探针相对关卡名框的上扩"
+                        },
+                        "name_probe_extra_w": {
+                            "type": "integer",
+                            "default": 70,
+                            "description": "星标探针相对关卡名框的右扩"
+                        },
+                        "name_probe_extra_h": {
+                            "type": "integer",
+                            "default": 8,
+                            "description": "星标探针下沿相对名称框顶部的扩展（避免吃进名称文字）"
+                        },
+                        "name_lit_pixels": {
+                            "type": "integer",
+                            "default": 25,
+                            "description": "名称锚点下判定关卡已完成的亮像素数阈值"
+                        },
+                        "end_confirm": {
+                            "type": "integer",
+                            "default": 2,
+                            "description": "名称签名连续不变、判定滑到尽头的确认帧数"
+                        },
                         "difficulty_groups": {
                             "type": "integer",
                             "default": 3,
@@ -574,8 +649,13 @@
                         },
                         "lit_pixels": {
                             "type": "integer",
-                            "default": 15,
+                            "default": 25,
                             "description": "判定关卡已完成的亮像素数阈值"
+                        },
+                        "clean_number_box_max_w": {
+                            "type": "integer",
+                            "default": 90,
+                            "description": "编号框宽度超过此值视为混入星标/装饰，不能作为名称探针的完成度兜底"
                         },
                         "marker_b_max": {
                             "type": "integer",
@@ -584,7 +664,7 @@
                         },
                         "marker_extra_h": {
                             "type": "integer",
-                            "default": 65,
+                            "default": 40,
                             "description": "难度标记搜索区相对编号框的下扩"
                         },
                         "marker_extra_w": {
@@ -629,7 +709,7 @@
                         },
                         "multi_marker_pixels": {
                             "type": "integer",
-                            "default": 30,
+                            "default": 60,
                             "description": "三难度红色标记像素数阈值"
                         },
                         "multi_star_width": {

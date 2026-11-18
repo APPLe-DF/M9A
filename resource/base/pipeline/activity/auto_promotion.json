@@ -351,8 +351,23 @@
             }
         }
     },
+    "APStageNameOCR": {
+        "desc": "辅助节点：地图底部条关卡名 OCR，仅供 APMapAnalyze 内部调用，请勿加入 next。ROI 覆盖整个底部条（含左右边缘）；名称是主锚点，编号仅在名称缺失时兜底。",
+        "recognition": {
+            "type": "OCR",
+            "param": {
+                "roi": [
+                    0,
+                    538,
+                    1280,
+                    90
+                ],
+                "expected": "[\\s\\S]"
+            }
+        }
+    },
     "AP_EnterStage": {
-        "desc": "地图页：找到编号最小的未完成关卡（编号旁灰色星标）并点击进入",
+        "desc": "地图页：按关卡名主锚点找到第一个未完成关卡（名称框附近的星标探针判定），编号做交叉校验/旧地图兜底；点击名称框向上扩展的关卡按钮区域",
         "recognition": {
             "type": "Custom",
             "param": {

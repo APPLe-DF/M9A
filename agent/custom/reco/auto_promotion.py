@@ -1,4 +1,5 @@
 import re
+from dataclasses import dataclass
 from difflib import SequenceMatcher
 from typing import Any
 
@@ -12,19 +13,42 @@ from utils.maa_types import is_hit, ocr_results
 from utils.params import ParamOverrideMixin, parse_params
 
 
-def is_stage_map(context: Context, image: Any) -> bool:
+@dataclass(slots=True)
+class StageEntry:
+    """A stage rail entry combining the OCR name and/or number token."""
+
+    name: str | None
+    number: int | None
+    name_box: list[int] | None
+    number_box: list[int] | None
+    x: float
+    source: str
+
+
+def is_stage_map(
+    context: Context,
+    image: Any,
+    entries: list[StageEntry] | None = None,
+    allow_start_action: bool = False,
+) -> bool:
     """关卡地图页判定（活动与主线通用）。
 
     活动地图左上有「探索模式/故事模式」标签；主线地图没有模式按钮，
-    退而验证底部有关卡编号 token 且无「开始行动」按钮（关卡详情页底部
+    退而验证底部有关卡名/编号 token 且无「开始行动」按钮（关卡详情页底部
     也有缩略编号条，但详情页必有开始行动按钮，以此区分）。
     """
     detail = context.run_recognition("APExploreAnchorOCR", image)
     if any(any(word in r.text for word in ("探索", "探险", "故事")) for r in ocr_results(detail)):
         return True
-    if not APMapAnalyze()._stage_numbers(context, image):
-        return False
-    return not is_hit(context.run_recognition("AP_StartAction", image))
+    if entries is None:
+        entries = APMapAnalyze()._stage_entries(context, image)
+    if entries:
+        # 名称条目说明底部关卡条存在；详情面板打开时 AP_StartAction 也可能命中，
+        # 此时仍应放行——AP_PromotionLoop 的 next 会先点开始行动。
+        if any(entry.name for entry in entries):
+            return allow_start_action or not is_hit(context.run_recognition("AP_StartAction", image))
+        return not is_hit(context.run_recognition("AP_StartAction", image))
+    return False
 
 
 def _stage_map_mode_detail(context: Context, image: Any) -> tuple[str | None, Any | None]:
@@ -51,7 +75,7 @@ def _stage_map_mode_detail(context: Context, image: Any) -> tuple[str | None, An
         return "explore", story_result.box
     if explore_result:
         return "story", explore_result.box
-    if is_stage_map(context, image):
+    if is_stage_map(context, image, allow_start_action=True):
         return "plain", None
     return None, None
 
@@ -428,27 +452,30 @@ class APMapAnalyze(ParamOverrideMixin, CustomRecognition):
     """
     活动推图地图分析。
 
-    在地图底部条 OCR 关卡编号，编号右侧邻域找完成星标。
-    判别不依赖具体颜色（官方每期会微调星标色调）：
-    亮星 = 高饱和且高亮的像素簇；灰星 = 邻域内几乎没有高饱和亮像素。
+    以地图底部条 OCR 到的关卡名为主锚点，编号为交叉校验：
+    - 名称负责定位、排序、点击区域；
+    - 名称框上方/右侧窄带内的亮像素负责判断完成星标；
+    - 名称+编号都不可用时绝不返回“全部完成”，由宿主超时兜底。
 
     参数格式 (custom_recognition_param):
     {
-        "query": "stage" | "swipe" | "done",
+        "query": "map" | "stage" | "swipe" | "done",
         // 其余 key 为可选的识别参数覆盖（类常量名小写，如 "sat_min": 90），
         // 见 OVERRIDABLE 白名单与协议文档的契约参数表
     }
     - map:   命中关卡地图页，用于战斗等待循环回到地图后的出口
-    - stage: 命中并返回编号最小的未完成关卡的点击区域
+    - stage: 命中并返回编号最小/最左侧的未完成关卡的点击区域
     - swipe: 地图可见、无未完成关卡、且尚未确认滑到尽头时命中（供滑动节点使用）
-    - done:  连续多次滑动后画面无变化（已到尽头）且无未完成关卡时命中（推图完成）
+    - done:  连续多次滑动后名称集合稳定且无未完成关卡时命中（推图完成）
     """
 
     OVERRIDABLE = frozenset(
         {
+            "ANCHOR_MODE",
             "SAT_MIN",
             "VAL_MIN",
             "LIT_PIXELS",
+            "CLEAN_NUMBER_BOX_MAX_W",
             "ZONE_PAD_LEFT",
             "ZONE_PAD_TOP",
             "ZONE_EXTRA_W",
@@ -459,6 +486,21 @@ class APMapAnalyze(ParamOverrideMixin, CustomRecognition):
             "STAGE_BOX_CENTER_Y_MAX",
             "STAGE_BOX_H_MIN",
             "STAGE_BOX_H_MAX",
+            "STAGE_NUM_MIN",
+            "STAGE_NUM_MAX",
+            "NAME_SCORE_MIN",
+            "NAME_BOX_CENTER_X_MIN",
+            "NAME_BOX_CENTER_X_MAX",
+            "NAME_BOX_CENTER_Y_MIN",
+            "NAME_BOX_CENTER_Y_MAX",
+            "NAME_BOX_H_MIN",
+            "NAME_BOX_H_MAX",
+            "NAME_PROBE_PAD_LEFT",
+            "NAME_PROBE_PAD_TOP",
+            "NAME_PROBE_EXTRA_W",
+            "NAME_PROBE_EXTRA_H",
+            "NAME_LIT_PIXELS",
+            "END_CONFIRM",
             "MULTI_STAR_WIDTH",
             "MULTI_ZONE_EXTRA_W",
             "STAR_ROW_UP",
@@ -482,21 +524,73 @@ class APMapAnalyze(ParamOverrideMixin, CustomRecognition):
             "STAR_X0_BACKOFF",
             "STAR_X0_MIN_OFFSET",
             "ZERO_STAGE_CONFIRM",
-            "STAGE_NUM_MIN",
-            "STAGE_NUM_MAX",
         }
     )
 
     # 关卡编号 token：1-2 位数字开头，允许 OCR 把右侧装饰误读进来（如 "01/3"）
     NUM_RE = re.compile(r"^[^\dA-Za-z\u4e00-\u9fff]{0,3}\s*(\d{1,2})([^\d].*)?$")
+    # 兼容 A051FH / A05iSH / 051F / 051E 这类“字母前缀 + 编号 + 星标噪声”
+    NUM_FALLBACK_RE = re.compile(r"^[^\d]{0,3}(\d{1,2})\d?\D.*$")
 
-    # 星标判定阈值（HSV，S/V 范围 0-255），由实机灰星/亮星取样数据确定：
-    # 灰星邻域高饱和亮像素 = 0；亮星当期活动 ≈ 120+，1987 等历史活动的细四角星
-    # 仅 ≈ 27-62，故阈值取 15 以跨活动通用。VAL_MIN 须 >=150 以排除关卡名底下的
-    # 墨绿圆盘装饰
+    # 名称 token：CJK/日文/英文均允许，长度和字号由 _is_stage_name_box 把关
+    NAME_RE = re.compile(
+        r"^[\u4e00-\u9fff\u3040-\u30ff々〆ヵヶ・ーA-Za-z]["
+        r"\u4e00-\u9fff\u3040-\u30ff々〆ヵヶ・ーA-Za-z0-9' .:&+/\-]{1,23}$"
+    )
+    NAME_EXCLUDE = frozenset(
+        {
+            "开始行动",
+            "推荐等级",
+            "故事模式",
+            "探索模式",
+            "战斗",
+            "胜利",
+            "跳过",
+            "确认",
+            "领取",
+            "活动",
+            "常规",
+            "任务",
+            "复现",
+            "解锁",
+            "取消",
+            "关闭",
+            "返回",
+            "下一步",
+            "故事",
+            "映像",
+            "轶事",
+            "资源",
+            "洞悉",
+            "人工梦游",
+            "局外演绎",
+            "探奇",
+        }
+    )
+
+    # 名称锚点：名称行位置、字号和 OCR 置信度
+    ANCHOR_MODE: str = "auto"  # auto | name | number
+    NAME_SCORE_MIN = 0.85
+    NAME_BOX_CENTER_X_MIN = 120
+    NAME_BOX_CENTER_X_MAX = 1280
+    NAME_BOX_CENTER_Y_MIN = 550
+    NAME_BOX_CENTER_Y_MAX = 640
+    NAME_BOX_H_MIN = 24
+    NAME_BOX_H_MAX = 90
+
+    # 名称锚点下的星标探针：相对名称框的扩展
+    NAME_PROBE_PAD_LEFT = 5
+    NAME_PROBE_PAD_TOP = 70
+    NAME_PROBE_EXTRA_W = 70
+    NAME_PROBE_EXTRA_H = 8
+
+    # 星标判定阈值（HSV，S/V 范围 0-255）。名称锚点窄带内 25 可避开
+    # 当前关卡白色/金色倒三角；1987 等历史活动的细四角星约 27-62，仍能通过。
     SAT_MIN = 100
     VAL_MIN = 160
-    LIT_PIXELS = 15
+    LIT_PIXELS = 25
+    NAME_LIT_PIXELS = 25
+    CLEAN_NUMBER_BOX_MAX_W = 90
 
     # 星标搜索区相对编号 OCR 框的扩展（星标位于编号右侧约 30~90px，同行）
     ZONE_PAD_LEFT = 5
@@ -531,9 +625,11 @@ class APMapAnalyze(ParamOverrideMixin, CustomRecognition):
     ANCHOR_KEYWORDS = ("探索", "探险", "故事")
 
     # 滑到头判定：屏幕右半（x > RIGHT_HALF_X）无关卡编号即认为最后一关已过，
-    # 连续 RIGHT_EMPTY_CONFIRM 帧确认（章节交界处右半可能短暂无编号）
+    # 连续 RIGHT_EMPTY_CONFIRM 帧确认（章节交界处右半可能短暂无编号）。
+    # 名称路径另外使用名称签名连续稳定 END_CONFIRM 帧。
     RIGHT_HALF_X = 640
     RIGHT_EMPTY_CONFIRM = 2
+    END_CONFIRM = 2
 
     # 三难度红色标记的颜色掩码（BGR 取样自当期活动难度标记）
     MARKER_R_MIN = 120
@@ -556,6 +652,8 @@ class APMapAnalyze(ParamOverrideMixin, CustomRecognition):
 
     # 滑动到头检测状态（类属性，跨调用保留）
     _right_empty_count: int = 0
+    _last_name_signature: tuple[str, ...] | None = None
+    _name_stable_count: int = 0
     _pending_zero_stage: tuple[Any, ...] | None = None
     _pending_zero_count: int = 0
     ZERO_STAGE_CONFIRM = 2
@@ -563,6 +661,8 @@ class APMapAnalyze(ParamOverrideMixin, CustomRecognition):
     @classmethod
     def reset_swipe_state(cls) -> None:
         cls._right_empty_count = 0
+        cls._last_name_signature = None
+        cls._name_stable_count = 0
         cls._pending_zero_stage = None
         cls._pending_zero_count = 0
 
@@ -580,58 +680,92 @@ class APMapAnalyze(ParamOverrideMixin, CustomRecognition):
         query = params.get("query", "stage")
         self.apply_param_overrides(params)
 
+        entries = self._stage_entries(context, argv.image)
+
+        if not entries:
+            # 章节交界/加载帧可能暂时没有关卡条：允许 swipe 继续翻页，但
+            # 绝不把空识别当成 done；等名称/编号重新出现后再判定。
+            if query == "swipe" and self._has_map_anchor(context, argv.image):
+                logger.info("[AutoPromotion] 当前帧没有关卡条目，尝试向后滑动")
+                return CustomRecognition.AnalyzeResult(box=[0, 0, 0, 0], detail={})
+            if query == "map":
+                if is_stage_map(context, argv.image, entries, allow_start_action=True):
+                    return CustomRecognition.AnalyzeResult(box=[0, 0, 0, 0], detail={})
+            return None
+
         if query == "map":
-            if is_stage_map(context, argv.image):
+            if is_stage_map(context, argv.image, entries, allow_start_action=True):
                 return CustomRecognition.AnalyzeResult(box=[0, 0, 0, 0], detail={})
             return None
 
-        tokens = self._stage_numbers(context, argv.image)
-
-        incomplete = []
-        for text, num, box in tokens:
-            complete, detail = self._stage_complete(argv.image, box, num, text)
+        incomplete: list[tuple[StageEntry, str]] = []
+        for entry in entries:
+            complete, detail = self._stage_complete_entry(argv.image, entry)
             if not complete:
-                incomplete.append((text, num, box, detail))
+                incomplete.append((entry, detail))
 
         if query == "stage":
+            if not entries:
+                logger.info("[AutoPromotion] 未识别到关卡名/编号，跳过找关")
+                return None
             if not incomplete:
                 return None
-            # 锚点校验：关卡详情页底部也有缩略关卡条（数字 token），
-            # 不在地图页（活动模式标签 / 主线编号条判定）不能找关点击
-            if not is_stage_map(context, argv.image):
+            # 锚点校验：关卡详情页底部也有缩略关卡条，不能只凭底部文字找关
+            if not is_stage_map(context, argv.image, entries, allow_start_action=True):
                 return None
-            text, num, box, detail = min(incomplete, key=lambda item: item[1])
+            entry, detail = min(
+                incomplete,
+                key=lambda item: item[0].x,
+            )
+            click_box = self._click_box(entry, argv.image.shape[1], argv.image.shape[0])
             if self._needs_zero_stage_confirm(detail):
-                signature = (num, box[0] // 20, box[1] // 20)
+                signature = (
+                    entry.number if entry.number is not None else -1,
+                    entry.name or "",
+                    click_box[0] // 20,
+                    click_box[1] // 20,
+                )
                 if signature == APMapAnalyze._pending_zero_stage:
                     APMapAnalyze._pending_zero_count += 1
                 else:
                     APMapAnalyze._pending_zero_stage = signature
                     APMapAnalyze._pending_zero_count = 1
                 if APMapAnalyze._pending_zero_count < self.ZERO_STAGE_CONFIRM:
-                    logger.info(f"[AutoPromotion] 关卡 {text} 亮星暂为 0，等待下一帧确认")
+                    logger.info(f"[AutoPromotion] 关卡 {entry.name or entry.number} 亮星暂为 0，等待下一帧确认")
                     return None
-            logger.info(f"[AutoPromotion] 关卡 {text} 未完成（{detail}），进入")
+            label = entry.name or str(entry.number)
+            logger.info(f"[AutoPromotion] 关卡 {label} 未完成（{detail}），进入")
             APMapAnalyze.reset_swipe_state()
-            return CustomRecognition.AnalyzeResult(box=box, detail={"stage": text})
+            return CustomRecognition.AnalyzeResult(box=click_box, detail={"stage": label})
 
         if incomplete:
             return None  # 还有未完成关卡，无需滑动/结束
-
-        # swipe/done 锚定地图页（活动模式标签 / 主线编号条判定）：
-        # 章节交界处底部没有编号，活动图不能只拿编号判断
-        if not is_stage_map(context, argv.image):
+        if not entries:
+            # 关键保护：识别不到不等于全部完成；交给 AP_PromotionLoop 超时兜底。
+            return None
+        # swipe/done 锚定地图页（活动模式标签 / 名称或编号条判定）
+        if not is_stage_map(context, argv.image, entries, allow_start_action=True):
             return None
 
-        # 滑到头判定：屏幕右半没有关卡编号 = 最后一关已滑过屏幕中线。
-        # 连续两帧确认（章节交界处右半可能短暂无编号）。
-        # 不能用画面哈希（1987 星空背景持续动画，静止画面哈希也不稳定）
-        right_has_stage = any(box[0] + box[2] / 2 > self.RIGHT_HALF_X for _, _, box in tokens)
-        if right_has_stage:
-            APMapAnalyze._right_empty_count = 0
+        if self._use_name_anchor(entries):
+            signature = self._name_signature(entries)
+            if signature == APMapAnalyze._last_name_signature:
+                APMapAnalyze._name_stable_count += 1
+            else:
+                APMapAnalyze._last_name_signature = signature
+                APMapAnalyze._name_stable_count = 0
+            # 名称签名稳定还要有“右半屏没有关卡”作为辅助证据，避免弹窗/
+            # 手势被吞导致画面没动、两帧后误判滑到头。
+            right_has_stage = any(entry.x > self.RIGHT_HALF_X for entry in entries)
+            map_end = APMapAnalyze._name_stable_count >= self.END_CONFIRM and not right_has_stage
         else:
-            APMapAnalyze._right_empty_count += 1
-        map_end = APMapAnalyze._right_empty_count >= self.RIGHT_EMPTY_CONFIRM
+            # 旧编号路径保留原有右半屏判定
+            right_has_stage = any(entry.x > self.RIGHT_HALF_X for entry in entries)
+            if right_has_stage:
+                APMapAnalyze._right_empty_count = 0
+            else:
+                APMapAnalyze._right_empty_count += 1
+            map_end = APMapAnalyze._right_empty_count >= self.RIGHT_EMPTY_CONFIRM
 
         if query == "swipe":
             if map_end:
@@ -649,16 +783,88 @@ class APMapAnalyze(ParamOverrideMixin, CustomRecognition):
         logger.error(f"[AutoPromotion] 无效 query: {query}")
         return None
 
-    def _is_explore_map(self, context: Context, image: Any) -> bool:
-        """地图页左上角常驻模式标签（探索模式/故事模式），章节交界处也在；
-        对话/主界面没有。"""
-        detail = context.run_recognition("APExploreAnchorOCR", image)
-        return any(any(word in result.text for word in self.ANCHOR_KEYWORDS) for result in ocr_results(detail))
+    def _is_clean_number_box(self, box: list[int] | None) -> bool:
+        return box is not None and box[2] <= self.CLEAN_NUMBER_BOX_MAX_W
 
-    def _stage_numbers(self, context: Context, image: Any) -> list[tuple[str, int, list[int]]]:
-        """OCR 地图底部条，返回 (原文, 编号, box)，按编号升序。"""
+    def _use_name_anchor(self, entries: list[StageEntry]) -> bool:
+        if self.ANCHOR_MODE == "number":
+            return False
+        if self.ANCHOR_MODE == "name":
+            return True
+        return any(entry.name_box is not None for entry in entries)
+
+    def _has_map_anchor(self, context: Context, image: Any) -> bool:
+        detail = context.run_recognition("APExploreAnchorOCR", image)
+        return any(
+            any(word in result.text for word in self.ANCHOR_KEYWORDS)
+            for result in ocr_results(detail)
+        )
+
+    def _stage_entries(self, context: Context, image: Any) -> list[StageEntry]:
+        """OCR 底部条，把名称和编号按 x 轴配对成关卡条目。"""
+        number_tokens = self._stage_number_tokens(context, image)
+        name_tokens = [] if self.ANCHOR_MODE == "number" else self._stage_name_tokens(context, image)
+        if not number_tokens and not name_tokens:
+            return []
+
+        entries: list[StageEntry] = []
+        used_numbers: set[int] = set()
+        for name, name_box in name_tokens:
+            paired = self._nearest_number_token(name_box, number_tokens, used_numbers)
+            if paired is None:
+                entries.append(
+                    StageEntry(
+                        name=name,
+                        number=None,
+                        name_box=name_box,
+                        number_box=None,
+                        x=name_box[0] + name_box[2] / 2,
+                        source="name",
+                    )
+                )
+                continue
+            number_index, number, number_box = paired
+            used_numbers.add(number_index)
+            entries.append(
+                StageEntry(
+                    name=name,
+                    number=number,
+                    name_box=name_box,
+                    number_box=number_box,
+                    x=name_box[0] + name_box[2] / 2,
+                    source="both",
+                )
+            )
+
+        for index, (_text, number, number_box) in enumerate(number_tokens):
+            if index in used_numbers:
+                continue
+            entries.append(
+                StageEntry(
+                    name=None,
+                    number=number,
+                    name_box=None,
+                    number_box=number_box,
+                    x=number_box[0] + number_box[2] / 2,
+                    source="number",
+                )
+            )
+
+        deduped: list[StageEntry] = []
+        seen: set[tuple[str, int]] = set()
+        for entry in entries:
+            key = (entry.name or "", round(entry.x / 20))
+            if key in seen:
+                continue
+            seen.add(key)
+            deduped.append(entry)
+        deduped.sort(key=lambda entry: entry.x)
+        return deduped
+
+    def _stage_number_tokens(self, context: Context, image: Any) -> list[tuple[str, int, list[int]]]:
+        """OCR 底部条编号，返回 (原文, 编号, box)，按编号升序。"""
         detail = context.run_recognition("APStageNumberOCR", image)
-        tokens = []
+        tokens: list[tuple[str, int, list[int]]] = []
         for result in ocr_results(detail):
             box = list(result.box)
             parsed = self._parse_stage_number(result.text.strip(), box)
@@ -669,6 +875,83 @@ class APMapAnalyze(ParamOverrideMixin, CustomRecognition):
                 tokens.append((result.text.strip(), num, stage_box))
         tokens.sort(key=lambda item: item[1])
         return tokens
+
+    def _stage_numbers(self, context: Context, image: Any) -> list[tuple[str, int, list[int]]]:
+        """兼容旧调用点：只返回编号 token。"""
+        return self._stage_number_tokens(context, image)
+
+    def _stage_name_tokens(self, context: Context, image: Any) -> list[tuple[str, list[int]]]:
+        """OCR 底部条关卡名，返回 (名称, box)。"""
+        detail = context.run_recognition("APStageNameOCR", image)
+        tokens: list[tuple[str, list[int]]] = []
+        for result in ocr_results(detail):
+            text = result.text.strip()
+            if not self._is_valid_stage_name(text):
+                continue
+            score = float(getattr(result, "score", 0.0) or 0.0)
+            if score < self.NAME_SCORE_MIN:
+                continue
+            box = list(result.box)
+            if not self._is_stage_name_box(box):
+                continue
+            tokens.append((text, box))
+        return tokens
+
+    def _is_valid_stage_name(self, text: str) -> bool:
+        compact = text.replace(" ", "").strip()
+        if len(compact) < 2 or len(compact) > 24:
+            return False
+        if compact in self.NAME_EXCLUDE:
+            return False
+        # 纯拉丁 token 若混入数字/斜杠，多半是星标噪声（如 F/80、04/F），
+        # 不是关卡名；含 CJK 的名称允许数字（如「7号往事」）。
+        if re.search(r"\d", compact) and not re.search(r"[\u4e00-\u9fff\u3040-\u30ff]", compact):
+            return False
+        return bool(self.NAME_RE.fullmatch(text))
+
+    def _is_stage_name_box(self, box: list[int]) -> bool:
+        cx = box[0] + box[2] / 2
+        cy = box[1] + box[3] / 2
+        return (
+            self.NAME_BOX_CENTER_X_MIN <= cx <= self.NAME_BOX_CENTER_X_MAX
+            and self.NAME_BOX_CENTER_Y_MIN <= cy <= self.NAME_BOX_CENTER_Y_MAX
+            and self.NAME_BOX_H_MIN <= box[3] <= self.NAME_BOX_H_MAX
+        )
+
+    def _nearest_number_token(
+        self,
+        name_box: list[int],
+        number_tokens: list[tuple[str, int, list[int]]],
+        used_numbers: set[int],
+    ) -> tuple[int, int, list[int]] | None:
+        best: tuple[float, int, int, list[int]] | None = None
+        for index, (_text, number, number_box) in enumerate(number_tokens):
+            if index in used_numbers:
+                continue
+            if not self._boxes_overlap_vertically(name_box, number_box):
+                continue
+            distance = abs(
+                (name_box[0] + name_box[2] / 2) - (number_box[0] + number_box[2] / 2)
+            )
+            max_distance = max(60.0, float(name_box[2]))
+            if distance > max_distance:
+                continue
+            candidate = (distance, index, number, number_box)
+            if best is None or candidate[0] < best[0]:
+                best = candidate
+        if best is None:
+            return None
+        return best[1], best[2], best[3]
+
+    @staticmethod
+    def _boxes_overlap_vertically(box_a: list[int], box_b: list[int]) -> bool:
+        bottom = min(box_a[1] + box_a[3], box_b[1] + box_b[3])
+        top = max(box_a[1], box_b[1])
+        if bottom > top:
+            return True
+        center_a = box_a[1] + box_a[3] / 2
+        center_b = box_b[1] + box_b[3] / 2
+        return abs(center_a - center_b) <= 60
 
     def _parse_stage_number(self, text: str, box: list[int]) -> tuple[int, list[int]] | None:
         text = text.strip()
@@ -683,6 +966,10 @@ class APMapAnalyze(ParamOverrideMixin, CustomRecognition):
             return None
 
         compact = re.sub(r"\s+", "", text)
+        m = self.NUM_FALLBACK_RE.match(compact)
+        if m:
+            return self._valid_stage_number(int(m.group(1)), box)
+
         m = re.match(r"^[^\d]{0,3}(\d{2})(\d{2,})$", compact)
         if not m:
             return None
@@ -706,13 +993,35 @@ class APMapAnalyze(ParamOverrideMixin, CustomRecognition):
             and self.STAGE_BOX_H_MIN <= box[3] <= self.STAGE_BOX_H_MAX
         )
 
-    def _lit_pixel_count(self, image: Any, box: list[int]) -> int:
-        """统计编号邻域内高饱和高亮像素数（亮星像素）。image 为 BGR ndarray。"""
+    def _click_box(self, entry: StageEntry, image_width: int = 1280, image_height: int = 720) -> list[int]:
+        box = entry.name_box or entry.number_box
+        if box is None:
+            return [0, 0, 0, 0]
+        # 编号框干净时优先用旧点击区（编号本身就是关卡按钮）；编号框被
+        # 星标粘宽时退回名称框向上扩展的按钮区域。
+        if entry.number_box is not None and self._is_clean_number_box(entry.number_box):
+            box = entry.number_box
+        x, y, w, h = box
+        x0 = max(0, x - 20)
+        y0 = max(0, y - 45)
+        x1 = min(image_width, x + w + 20)
+        y1 = min(image_height, y + h + 50)
+        return [x0, y0, max(1, x1 - x0), max(1, y1 - y0)]
+
+    def _name_probe_box(self, box: list[int], image_width: int, image_height: int) -> list[int]:
+        x, y, w, _ = box
+        x0 = max(0, x - self.NAME_PROBE_PAD_LEFT)
+        y0 = max(0, y - self.NAME_PROBE_PAD_TOP)
+        x1 = min(image_width, x + w + self.NAME_PROBE_EXTRA_W)
+        y1 = min(image_height, y + self.NAME_PROBE_EXTRA_H)
+        return [x0, y0, max(1, x1 - x0), max(1, y1 - y0)]
+
+    def _lit_count_box(self, image: Any, box: list[int]) -> int:
         h_img, w_img = image.shape[:2]
-        x0 = max(box[0] - self.ZONE_PAD_LEFT, 0)
-        y0 = max(box[1] - self.ZONE_PAD_TOP, 0)
-        x1 = min(box[0] + box[2] + self.ZONE_EXTRA_W, w_img)
-        y1 = min(box[1] + box[3] + self.ZONE_EXTRA_H, h_img)
+        x0 = max(box[0], 0)
+        y0 = max(box[1], 0)
+        x1 = min(box[0] + box[2], w_img)
+        y1 = min(box[1] + box[3], h_img)
         crop = image[y0:y1, x0:x1]
         if crop.size == 0:
             return 0
@@ -720,6 +1029,56 @@ class APMapAnalyze(ParamOverrideMixin, CustomRecognition):
         v = c.max(axis=2)
         s = (v - c.min(axis=2)) * 255 // np.maximum(v, 1)
         return int(((v >= self.VAL_MIN) & (s >= self.SAT_MIN)).sum())
+
+    def _lit_pixel_count(self, image: Any, box: list[int]) -> int:
+        """旧编号路径：统计编号邻域内高饱和高亮像素数（亮星像素）。"""
+        h_img, w_img = image.shape[:2]
+        probe = [
+            max(box[0] - self.ZONE_PAD_LEFT, 0),
+            max(box[1] - self.ZONE_PAD_TOP, 0),
+            min(box[0] + box[2] + self.ZONE_EXTRA_W, w_img) - max(box[0] - self.ZONE_PAD_LEFT, 0),
+            min(box[1] + box[3] + self.ZONE_EXTRA_H, h_img) - max(box[1] - self.ZONE_PAD_TOP, 0),
+        ]
+        return self._lit_count_box(image, probe)
+
+    def _stage_complete_entry(self, image: Any, entry: StageEntry) -> tuple[bool, str]:
+        if entry.name_box is not None and self._use_name_anchor([entry]):
+            image_height, image_width = image.shape[:2]
+            probe = self._name_probe_box(entry.name_box, image_width, image_height)
+            lit = self._lit_count_box(image, probe)
+            if lit >= self.NAME_LIT_PIXELS:
+                return True, f"名称探针亮像素 {lit}"
+
+            groups = self._multi_difficulty_groups(
+                image,
+                entry.name_box,
+                entry.name or "",
+                use_name_anchor=True,
+            )
+            if groups is not None and all(groups):
+                progress = "".join("1" if item else "0" for item in groups)
+                return True, f"三难度 {progress}，名称探针亮像素 {lit}"
+
+            # 名称探针没命中时，干净且未与星标粘连的编号框仍可作为兜底；
+            # 编号框过宽时通常已经混入星标/装饰，不能用来做完成度判断。
+            if entry.number_box is not None and self._is_clean_number_box(entry.number_box):
+                number_complete, number_detail = self._stage_complete(
+                    image,
+                    entry.number_box,
+                    entry.number or 0,
+                    entry.name or "",
+                )
+                if number_complete:
+                    return True, f"名称探针亮像素 {lit}；编号兜底 {number_detail}"
+            detail = f"名称探针亮像素 {lit}"
+            if groups is not None:
+                progress = "".join("1" if item else "0" for item in groups)
+                detail = f"三难度 {progress}，{detail}"
+            return False, detail
+
+        if entry.number_box is not None:
+            return self._stage_complete(image, entry.number_box, entry.number or 0, entry.name or "")
+        return False, "无可用识别框"
 
     def _stage_complete(self, image: Any, box: list[int], stage_num: int, text: str = "") -> tuple[bool, str]:
         lit = self._lit_pixel_count(image, box)
@@ -737,13 +1096,22 @@ class APMapAnalyze(ParamOverrideMixin, CustomRecognition):
         return complete, f"三难度 {progress}，亮像素 {lit}"
 
     def _needs_zero_stage_confirm(self, detail: str) -> bool:
-        return detail == "亮像素 0"
+        return detail.endswith("亮像素 0")
 
-    def _multi_difficulty_groups(self, image: Any, box: list[int], text: str = "") -> list[bool] | None:
-        if not self._looks_multi_difficulty(image, box, text):
+    def _name_signature(self, entries: list[StageEntry]) -> tuple[str, ...]:
+        return tuple(sorted(entry.name or f"#{entry.number}" for entry in entries))
+
+    def _multi_difficulty_groups(
+        self,
+        image: Any,
+        box: list[int],
+        text: str = "",
+        use_name_anchor: bool = False,
+    ) -> list[bool] | None:
+        if not self._looks_multi_difficulty(image, box, text, use_name_anchor):
             return None
 
-        crop = self._star_row_crop(image, box)
+        crop = self._star_row_crop(image, box, use_name_anchor)
         if crop.size == 0:
             return None
 
@@ -759,11 +1127,17 @@ class APMapAnalyze(ParamOverrideMixin, CustomRecognition):
             result.append(int(lit_mask[:, x0:x1].sum()) >= self.DIFFICULTY_LIT_PIXELS)
         return result
 
-    def _looks_multi_difficulty(self, image: Any, box: list[int], text: str = "") -> bool:
+    def _looks_multi_difficulty(
+        self,
+        image: Any,
+        box: list[int],
+        text: str = "",
+        use_name_anchor: bool = False,
+    ) -> bool:
         if self._has_multi_text_prefix(text):
             return True
 
-        crop = self._multi_marker_crop(image, box)
+        crop = self._multi_marker_crop(image, box, use_name_anchor)
         if crop.size == 0:
             return False
 
@@ -786,20 +1160,32 @@ class APMapAnalyze(ParamOverrideMixin, CustomRecognition):
     def _has_multi_text_prefix(self, text: str) -> bool:
         return bool(re.match(r"^[^\dA-Za-z\u4e00-\u9fff]{1,3}\s*\d", text.strip()))
 
-    def _star_row_crop(self, image: Any, box: list[int]) -> Any:
+    def _star_row_crop(self, image: Any, box: list[int], use_name_anchor: bool = False) -> Any:
         h_img, w_img = image.shape[:2]
+        if use_name_anchor:
+            x0 = max(box[0] - self.NAME_PROBE_PAD_LEFT, 0)
+            y0 = max(box[1] - self.NAME_PROBE_PAD_TOP, 0)
+            width = max(self.MULTI_STAR_WIDTH, box[2] + self.NAME_PROBE_EXTRA_W)
+            x1 = min(x0 + width, w_img)
+            y1 = min(box[1] + max(self.STAR_ROW_DOWN, box[3]), h_img)
+            return image[y0:y1, x0:x1]
         x0 = self._star_x0(box, w_img)
         y0 = max(box[1] - self.STAR_ROW_UP, 0)
         x1 = min(x0 + self.MULTI_STAR_WIDTH, w_img)
         y1 = min(box[1] + self.STAR_ROW_DOWN, h_img)
         return image[y0:y1, x0:x1]
 
-    def _multi_marker_crop(self, image: Any, box: list[int]) -> Any:
+    def _multi_marker_crop(self, image: Any, box: list[int], use_name_anchor: bool = False) -> Any:
         h_img, w_img = image.shape[:2]
         x0 = max(box[0] - self.MARKER_PAD_LEFT, 0)
         y0 = max(box[1] - self.MARKER_PAD_TOP, 0)
-        x1 = min(box[0] + self.MARKER_EXTRA_W, w_img)
-        y1 = min(box[1] + self.MARKER_EXTRA_H, h_img)
+        if use_name_anchor:
+            # 名称框通常比编号框宽，向右至少留出名称宽度，避免三难度标记被裁掉。
+            x1 = min(box[0] + box[2] + self.MARKER_EXTRA_W, w_img)
+            y1 = min(box[1] + self.MARKER_EXTRA_H, h_img)
+        else:
+            x1 = min(box[0] + self.MARKER_EXTRA_W, w_img)
+            y1 = min(box[1] + self.MARKER_EXTRA_H, h_img)
         return image[y0:y1, x0:x1]
 
     def _star_x0(self, box: list[int], image_width: int) -> int:
